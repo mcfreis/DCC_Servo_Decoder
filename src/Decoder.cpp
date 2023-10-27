@@ -1,6 +1,16 @@
 #include "Decoder.h"
 #include "CV.h"
 
+#define SERVO_ON(idx) { \
+    servo[servoIdx].attach(pwmPin[servoIdx]); \
+    digitalWrite(powerPin[servoIdx], HIGH); \
+}
+
+#define SERVO_OFF(idx) { \
+    digitalWrite(powerPin[servoIdx], LOW); \
+    servo[servoIdx].detach(); \
+}
+
 Decoder::Decoder()
 {    
     setupButton.reset();
@@ -102,7 +112,7 @@ void Decoder::initServos()
         pinMode(powerPin[servoIdx], OUTPUT);
         setServoToPosition(servoIdx);  // Turns power on automatically
         delay(TIMEOUT_WAIT_BEFORE_OFF);
-        digitalWrite(powerPin[servoIdx], LOW);
+        SERVO_OFF(servoIdx);
 
         console.displayReadSettings(servoIdx, &servoSettings[servoIdx]);
     }
@@ -110,7 +120,7 @@ void Decoder::initServos()
 
 void Decoder::saveServo(int servoIdx)
 {
-    digitalWrite(powerPin[servoIdx], LOW); 
+    SERVO_OFF(servoIdx);
     servoSettings[servoIdx].direction = endPosition;
     servoSettings[servoIdx].config = Config_t::configured;
 
@@ -131,7 +141,7 @@ void Decoder::wobbleServo(int iterations, int servoIdx)
     if (servoSettings[servoIdx].posCurrent < 90) idx = 1;
 
     console.startWobble();
-    digitalWrite(powerPin[servoIdx], HIGH);
+    SERVO_ON(servoIdx);
     for (int j = 0; j < iterations; j++)
     {
         servo[servoIdx].write(positions[idx][0]);
@@ -141,7 +151,7 @@ void Decoder::wobbleServo(int iterations, int servoIdx)
     }
     servo[servoIdx].write(servoSettings[servoIdx].posCurrent);
     delay(TIMEOUT_WAIT_BEFORE_OFF);
-    digitalWrite(powerPin[servoIdx], LOW);
+    SERVO_OFF(servoIdx);
     console.endWobble();
 }
 
@@ -252,7 +262,7 @@ void Decoder::process()
 void Decoder::setServoToPosition(int servoIdx)
 {
     // Servo einschalten und neuen Wert setzen
-    digitalWrite(powerPin[servoIdx], HIGH);
+    SERVO_ON(servoIdx);
 
     if (servoSettings[servoIdx].direction == throwPosition)
     {
@@ -274,7 +284,7 @@ void Decoder::setServoToPosition(int servoIdx)
 void Decoder::testServoSpeed(int servoIdx)
 {    
     // Servo einschalten und neuen Wert setzen
-    digitalWrite(powerPin[servoIdx], HIGH);
+    SERVO_ON(servoIdx);
 
     // Den Test nur aus der Ruheposition starten
     if (servoSettings[servoIdx].direction == endPosition)
@@ -393,7 +403,7 @@ void Decoder::setTurnoutDirection(uint16_t Addr, Direction_t Direction)
     servoSettings[servoIdx].direction = Direction;
     servoSettings[servoIdx].tLastMove = millis();
 
-    digitalWrite(powerPin[servoIdx], HIGH);
+    SERVO_ON(servoIdx);
 
     console.displayTurnoutToggle(servoIdx, &servoSettings[servoIdx], Direction);
 }
@@ -428,7 +438,7 @@ void Decoder::moveServoToPosition(int servoIdx, Direction_t Direction)
         if ((*pCurrent == servoSettings[servoIdx].posClosed) || 
             (*pCurrent == servoSettings[servoIdx].posThrown))
         {
-            digitalWrite(powerPin[servoIdx], LOW);
+            SERVO_OFF(servoIdx);
             servoSettings[servoIdx].direction = endPosition;
             if (!((decoderSM == setupServoSpeed) && (currentServoModified == false)))
             {
