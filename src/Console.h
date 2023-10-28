@@ -15,9 +15,9 @@ public:
     void displayAddress(int address);
     void displayResetFactorySettings();
     void displayWaitingForAddress();
-    void displaySwitchFromCloseToThrow(int servoIdx);
-    void displaySetupClose(int servoIdx);
-    void displaySwitchToSpeed(int servoIdx);
+    void displaySwitchFromCloseToThrow(int servoIdx, ServoSettings_t *setting);
+    void displaySetupClose(int servoIdx, ServoSettings_t *setting);
+    void displaySwitchToSpeed(int servoIdx, ServoSettings_t *setting);
     void displayFinish();
 
     void displayReadSettings(int servoIdx, ServoSettings_t * settings);

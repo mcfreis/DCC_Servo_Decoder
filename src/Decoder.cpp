@@ -93,9 +93,6 @@ void Decoder::initServos()
 {
     for (int servoIdx = 0; servoIdx < SERVO_COUNT; servoIdx++)
     {
-        // Attach Servo object to actual hardware pin
-        servo[servoIdx].attach(pwmPin[servoIdx]);
-
         // Load settings
         servoSettings[servoIdx].posClosed = Dcc.getCV(CV_SERVO_OFFSET(CV_SERVO_CLOSE, servoIdx));
         servoSettings[servoIdx].posThrown = Dcc.getCV(CV_SERVO_OFFSET(CV_SERVO_THROW, servoIdx));
@@ -135,13 +132,17 @@ void Decoder::saveServo(int servoIdx)
 
 void Decoder::wobbleServo(int iterations, int servoIdx)
 {
-    const int positions[2][2] = {{80, 100}, {100, 80}};
+    const int positions[2][2] = {
+        {SERVO_WOBBLE_CLOSED, SERVO_WOBBLE_THROWN}, 
+        {SERVO_WOBBLE_THROWN, SERVO_WOBBLE_CLOSED}
+    };
     int idx = 0;
 
-    if (servoSettings[servoIdx].posCurrent < 90) idx = 1;
+    if (servoSettings[servoIdx].posCurrent < SERVO_ANGLE_CENTER) idx = 1;
 
     console.startWobble();
     SERVO_ON(servoIdx);
+    delay(TIMEOUT_WAIT_BEFORE_OFF);
     for (int j = 0; j < iterations; j++)
     {
         servo[servoIdx].write(positions[idx][0]);
@@ -149,7 +150,7 @@ void Decoder::wobbleServo(int iterations, int servoIdx)
         servo[servoIdx].write(positions[idx][1]);
         delay(TIMEOUT_WOBBLE_PERIODE);
     }
-    servo[servoIdx].write(servoSettings[servoIdx].posCurrent);
+    servo[servoIdx].write(servoSettings[servoIdx].posClosed);
     delay(TIMEOUT_WAIT_BEFORE_OFF);
     SERVO_OFF(servoIdx);
     console.endWobble();
@@ -167,7 +168,7 @@ void Decoder::startSetup()
 void Decoder::configureCycleToSpeed()
 {
     decoderSM = setupServoSpeed;
-    console.displaySwitchToSpeed(currentServoIdx);
+    console.displaySwitchToSpeed(currentServoIdx, &servoSettings[currentServoIdx]);
 
     servoSettings[currentServoIdx].direction = endPosition;
 
@@ -184,7 +185,7 @@ void Decoder::configureCycleThroughServos()
 
         // Jetzt den anderen Anschlag
         decoderSM = setupServoPositionThrow;
-        console.displaySwitchFromCloseToThrow(currentServoIdx);
+        console.displaySwitchFromCloseToThrow(currentServoIdx, &servoSettings[currentServoIdx]);
 
         setupButton.reset();
         
@@ -197,16 +198,16 @@ void Decoder::configureCycleThroughServos()
     currentServoModified = false;
 
     if ((currentServoIdx >= 0) && (currentServoIdx < SERVO_COUNT))
-    { 
+    {
+        wobbleServo(2, currentServoIdx);
+
         // Prepare for setup to correct position
         servoSettings[currentServoIdx].direction = closePosition;
         setServoToPosition(currentServoIdx);
 
-        wobbleServo(2, currentServoIdx);
-
         // Nächstes Servo ansteuern
         decoderSM = setupServoPositionClose;
-        console.displaySetupClose(currentServoIdx);
+        console.displaySetupClose(currentServoIdx, &servoSettings[currentServoIdx]);
 
         setupButton.reset();
     }
@@ -216,7 +217,9 @@ void Decoder::configureCycleThroughServos()
 
         // Wir sind fertig
         decoderSM = normalOperation; 
-        console.displayFinish();      
+        console.displayFinish();   
+
+        asm volatile ("  jmp 0");  // reset!   
     }
 }
 
@@ -225,15 +228,24 @@ void Decoder::process()
     // You MUST call the NmraDcc.process() method frequently from the Arduino loop() function for correct library operation
     Dcc.process();
 
-    if ((decoderSM == setupServoPositionClose) || (decoderSM == setupServoPositionThrow))
+    if (decoderSM == setupAddress)
+    {
+        if (setupButton.since() > TIMEOUT_WAIT_FOR_ADDRESS)
+        {
+            wobbleServo(8, 0);
+
+            asm volatile ("  jmp 0");  // reset!
+        }
+    }
+    else if ((decoderSM == setupServoPositionClose) || (decoderSM == setupServoPositionThrow))
     { 
         if (setupButton.since() > TIMEOUT_SWITCH_SERVO_POS_SETUP)
         {
             if (decoderSM == setupServoPositionClose) configureCycleThroughServos();
             else configureCycleToSpeed();
         }
-
-        setServoToPosition(currentServoIdx);
+        else
+            setServoToPosition(currentServoIdx);
     }
     else if (decoderSM == setupServoSpeed)
     { 
@@ -242,8 +254,8 @@ void Decoder::process()
         {
             configureCycleThroughServos();
         }
-
-        testServoSpeed(currentServoIdx);
+        else
+            testServoSpeed(currentServoIdx);
     }
 
     if ((decoderSM == normalOperation) || (decoderSM == setupServoSpeed))

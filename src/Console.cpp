@@ -51,27 +51,30 @@ void Console::displayWaitingForAddress()
 #endif
 }
 
-void Console::displaySwitchFromCloseToThrow(int servoIdx)
+void Console::displaySwitchFromCloseToThrow(int servoIdx, ServoSettings_t *setting)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
-    Serial.print("Setup Servo (Thrown): ");
-    Serial.println(servoIdx);
+    Serial.print(servoIdx+1);
+    Serial.print(" Setup Servo Thrown: ");
+    Serial.println(setting->posThrown);
 #endif
 }
 
-void Console::displaySetupClose(int servoIdx)
+void Console::displaySetupClose(int servoIdx, ServoSettings_t *setting)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
-    Serial.print("Setup Servo (Closed): ");
-    Serial.println(servoIdx);
+    Serial.print(servoIdx+1);
+    Serial.print(" Setup Servo Closed: ");
+    Serial.println(setting->posClosed);
 #endif
 }
 
-void Console::displaySwitchToSpeed(int servoIdx)
+void Console::displaySwitchToSpeed(int servoIdx, ServoSettings_t *setting)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
-    Serial.print("Setup Servo (Speed): ");
-    Serial.println(servoIdx);
+    Serial.print(servoIdx+1);
+    Serial.print(" Setup Servo Speed: ");
+    Serial.println(setting->speed);
 #endif
 }
 
@@ -85,8 +88,8 @@ void Console::displayFinish()
 void Console::displayReadSettings(int servoIdx, ServoSettings_t *settings)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
-    Serial.print("Read Servo: ");
-    Serial.print(servoIdx);
+    Serial.print(servoIdx+1);
+    Serial.print(" Read Servo");
     Serial.print(", Configured: ");
     Serial.print(settings->config);
     Serial.print(", Closed: ");
@@ -103,8 +106,8 @@ void Console::displayReadSettings(int servoIdx, ServoSettings_t *settings)
 void Console::displaySaveSettings(int servoIdx, ServoSettings_t *settings)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
-    Serial.print("Save Servo: ");
-    Serial.print(servoIdx);
+    Serial.print(servoIdx+1);
+    Serial.print("Save Servo");
     Serial.print(", Configured: ");
     Serial.print(settings->config);
     Serial.print(", Closed: ");
@@ -121,8 +124,8 @@ void Console::displaySaveSettings(int servoIdx, ServoSettings_t *settings)
 void Console::displayUpdatePosition(int servoIdx, ServoSettings_t *settings)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
-    Serial.print("Update Servo: ");
-    Serial.print(servoIdx);
+    Serial.print(servoIdx+1);
+    Serial.print(" Update Servo");
     Serial.print(", Current: ");
     Serial.println(settings->posCurrent);
 #endif
@@ -131,9 +134,9 @@ void Console::displayUpdatePosition(int servoIdx, ServoSettings_t *settings)
 void Console::displayTurnoutToggle(int servoIdx, ServoSettings_t *settings, Direction_t Direction)
 {
 #ifdef DEBUG_SERVO_MOVEMENT
+    Serial.print(servoIdx+1);
+    Serial.print(" Servo ");
     Serial.print((Direction == closePosition) ? "Close" : "Throw");
-    Serial.print(" Servo: ");
-    Serial.print(servoIdx);
     Serial.print(", to: ");
     Serial.print((Direction == closePosition) ? settings->posClosed : settings->posThrown);
     Serial.print(", speed: ");
